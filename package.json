@@ -1,0 +1,20 @@
+{
+  "name": "chicken-republic-restaurant-website",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite",
+    "preview": "vite"
+  },
+  "dependencies": {
+    "@paystack/inline-js": "^2.25.0",
+    "@supabase/supabase-js": "^2.116.0",
+    "@vitejs/plugin-react": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  }
+}

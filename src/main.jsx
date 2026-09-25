@@ -99,11 +99,14 @@ function App() {
   const categories = ["All", ...new Set(menuItems.map((x) => x.category))];
   const filtered = useMemo(() => category === "All" ? menuItems : menuItems.filter(x => x.category === category), [category]);
 
-  const go = (p) => {
+ const go = (p) => {
   setPage(p);
+
   localStorage.setItem("chickenRepublicPage", p);
+
   setMobileOpen(false);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  window.scrollTo(0, 0);
 };
 
   const addToCart = (item) => {
@@ -410,108 +413,10 @@ const isCurrent =
     </section>
   );
 }
+
+const checkoutSubmitRef = React.useRef(false);
   const itemCount = cart.reduce((s,x)=>s+x.qty,0);
-  return <section className="section pageTop"><div className="pageIntro"><span className="eyebrow">ORDER ONLINE</span><h1>Build your order.</h1><p>Choose your meals, review your cart, then complete your customer and delivery details.</p></div><div className="orderLayout"><div className="orderBox"><h2>Your cart</h2>{!cart.length?<div className="empty"><ShoppingBag size={42}/><h3>Your cart is empty</h3><p>Add something delicious from the menu.</p><button className="primary" onClick={()=>go("menu")}>Browse Menu</button></div>:cart.map(x=><div className="cartLine" key={x.id}><img src={x.image} alt=""/><div><h3>{x.name}</h3><span>₦{x.price.toLocaleString()}</span></div><div className="qty"><button onClick={()=>changeQty(x.id,-1)}><Minus size={15}/></button><b>{x.qty}</b><button onClick={()=>changeQty(x.id,1)}><Plus size={15}/></button></div></div>)}</div><div className="orderBox"><h2>Checkout</h2><form onSubmit={async e => {
-  e.preventDefault();
-
-const form = e.currentTarget;
-
-const customerName = form.name.value;
-const customerPhone = form.phone.value;
-const customerEmail = form.email.value;
-
-const paystack = new Paystack();
-
-  await paystack.checkout({
-    key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-    email: customerEmail,
-    amount: total * 100,
-    currency: "NGN",
-    
-    onSuccess: async (transaction) => {
-  console.log("Payment successful:", transaction);
-
-  const orderId = `CR-${Date.now()}`;
-
-  const newOrder = {
-    id: orderId,
-    customer_name: customerName,
-customer_phone: customerPhone,
-customer_email: customerEmail,
-    total: Number(total),
-    payment_reference: transaction.reference || "",
-    payment_status: "Paid",
-    order_status: "New",
-  };
-
-  const { error: orderError } = await supabase
-    .from("orders")
-    .insert([newOrder]);
-
-  if (orderError) {
-    console.error("Order save failed:", orderError);
-    alert(
-      "Payment was successful, but we could not save your order. Please contact the restaurant."
-    );
-    return;
-  }
-
-  const orderItems = cart.map((item) => ({
-    order_id: orderId,
-    item_id: item.id,
-    name: item.name,
-    price: Number(item.price),
-    qty: item.qty,
-  }));
-
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItems);
-
-  if (itemsError) {
-    console.error("Order items save failed:", itemsError);
-    alert(
-      "Payment was successful, but we could not save the order items. Please contact the restaurant."
-    );
-    return;
-  }
-
-  const newOrderForTracking = {
-    id: orderId,
-    items: cart.map((item) => ({
-      id: item.id,
-      name: item.name,
-      price: Number(item.price),
-      qty: item.qty,
-    })),
-    total: Number(total),
-    paymentReference: transaction.reference || "",
-    paymentStatus: "Paid",
-    orderStatus: "New",
-    customerName: customerName,
-customerPhone: customerPhone,
-customerEmail: customerEmail,
-    createdAt: new Date().toISOString(),
-  };
-
-  const existingOrders = JSON.parse(
-    localStorage.getItem("chickenRepublicOrders") || "[]"
-  );
-
-  localStorage.setItem(
-  "chickenRepublicOrders",
-  JSON.stringify([...existingOrders, newOrderForTracking])
-);
-
-setCart([]);
-setOrderSent(false);
-go("track");
-},
-onCancel: () => {
-  console.log("Payment cancelled");
-},
-  });
-}}>
+  return <section className="section pageTop"><div className="pageIntro"><span className="eyebrow">ORDER ONLINE</span><h1>Build your order.</h1><p>Choose your meals, review your cart, then complete your customer and delivery details.</p></div><div className="orderLayout"><div className="orderBox"><h2>Your cart</h2>{!cart.length?<div className="empty"><ShoppingBag size={42}/><h3>Your cart is empty</h3><p>Add something delicious from the menu.</p><button className="primary" onClick={()=>go("menu")}>Browse Menu</button></div>:cart.map(x=><div className="cartLine" key={x.id}><img src={x.image} alt=""/><div><h3>{x.name}</h3><span>₦{x.price.toLocaleString()}</span></div><div className="qty"><button onClick={()=>changeQty(x.id,-1)}><Minus size={15}/></button><b>{x.qty}</b><button onClick={()=>changeQty(x.id,1)}><Plus size={15}/></button></div></div>)}</div><div className="orderBox"><h2>Checkout</h2><form onSubmit={(e) => e.preventDefault()}>
   <label>
     Name
     <input
@@ -563,18 +468,123 @@ onCancel: () => {
   </div>
 
   <button
+    type="button"
     className="primary wide"
     disabled={!cart.length}
+    onClick={async (e) => {
+      const form = e.currentTarget.form;
+
+      const customerName = form.name.value;
+      const customerPhone = form.phone.value;
+      const customerEmail = form.email.value;
+
+      const paystack = new Paystack();
+
+      await paystack.checkout({
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+        email: customerEmail,
+        amount: total * 100,
+        currency: "NGN",
+
+        onSuccess: async (transaction) => {
+          console.log("Payment successful:", transaction);
+
+          const orderId = `CR-${Date.now()}`;
+
+          const newOrder = {
+            id: orderId,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            customer_email: customerEmail,
+            total: Number(total),
+            payment_reference: transaction.reference || "",
+            payment_status: "Paid",
+            order_status: "New",
+          };
+
+          const { error: orderError } = await supabase
+            .from("orders")
+            .insert([newOrder]);
+
+          if (orderError) {
+            console.error("Order save failed:", orderError);
+            alert(
+              "Payment was successful, but we could not save your order. Please contact the restaurant."
+            );
+            return;
+          }
+
+          const orderItems = cart.map((item) => ({
+            order_id: orderId,
+            item_id: item.id,
+            name: item.name,
+            price: Number(item.price),
+            qty: item.qty,
+          }));
+
+          const { error: itemsError } = await supabase
+            .from("order_items")
+            .insert(orderItems);
+
+          if (itemsError) {
+            console.error("Order items save failed:", itemsError);
+            alert(
+              "Payment was successful, but we could not save the order items. Please contact the restaurant."
+            );
+            return;
+          }
+
+          const newOrderForTracking = {
+            id: orderId,
+            items: cart.map((item) => ({
+              id: item.id,
+              name: item.name,
+              price: Number(item.price),
+              qty: item.qty,
+            })),
+            total: Number(total),
+            paymentReference: transaction.reference || "",
+            paymentStatus: "Paid",
+            orderStatus: "New",
+            customerName: customerName,
+            customerPhone: customerPhone,
+            customerEmail: customerEmail,
+            createdAt: new Date().toISOString(),
+          };
+
+          const existingOrders = JSON.parse(
+            localStorage.getItem("chickenRepublicOrders") || "[]"
+          );
+
+          localStorage.setItem(
+            "chickenRepublicOrders",
+            JSON.stringify([
+              ...existingOrders,
+              newOrderForTracking,
+            ])
+          );
+
+          setCart([]);
+          setOrderSent(false);
+          go("track");
+        },
+
+        onCancel: () => {
+          console.log("Payment cancelled");
+        },
+      });
+    }}
   >
     <CreditCard size={18} />
     Continue to Payment
   </button>
 
   <small>
-  <p>
-    Secure payment powered by Paystack.
-  </p>
-</small></form></div></div></section>;
+    <p>
+      Secure payment powered by Paystack.
+    </p>
+  </small>
+</form></div></div></section>;
 }
 
 function Reservations({ sent, setSent }) {

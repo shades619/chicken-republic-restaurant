@@ -1,6 +1,6 @@
 # Chicken Republic Restaurant Website
 
-A responsive React + Vite restaurant website demo for Chicken Republic, Wurukum, Makurdi.
+A responsive React + Vite restaurant website for Chicken Republic, Wurukum, Makurdi.
 
 ## Included
 
